@@ -63,7 +63,6 @@ const LoggedInHomePage = () => {
   const handleFieldSaved = (fieldObj) => {
     setMissions((prev) => [...prev, fieldObj]);
     console.log("Saved Field:", fieldObj);
-    // Reset drawing mode after saving
     setNewMissionMode(false);
     setDrawType(null);
     setSelectedField(null);

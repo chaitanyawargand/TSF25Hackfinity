@@ -29,8 +29,6 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
   const handleMapCreated = (mapInstance) => {
     mapRef.current = mapInstance;
   };
-
-  // saveField receives full fieldData (not relying on React state timing)
   const saveField = (fieldData, operation) => {
     if (!fieldData) return;
     const { coords, layer, type, source = "existing", fieldName = "", uid } = fieldData;
@@ -48,8 +46,6 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       }
       return [...prev, fieldObj];
     });
-
-    // style + tooltip
     if (layer) {
       layer.setStyle({ color: source === "existing" ? "green" : "blue", dashArray: null });
 
@@ -63,7 +59,6 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       } catch (err) {
         latlng = null;
       }
-
       if (latlng) {
         layer.bindTooltip(operation, {
           permanent: true,
@@ -71,19 +66,13 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
           className: "custom-field-label",
         }).openTooltip(latlng);
       }
-
-      // close popup if open
       if (layer._popup) layer.closePopup();
     }
 
     if (onFieldSaved) onFieldSaved(fieldObj);
   };
-
-  // attach popup to a layer after it's added to map so layer._leaflet_id exists
   const attachPopup = (layer, coords, type, meta = {}) => {
-    // create fieldData from the live layer and provided meta
     const uid = meta.uid || layer._leaflet_id || Date.now();
-    // store metadata on layer for future reference (optional but handy)
     layer._uid = uid;
     layer.source = meta.source || layer.source || "existing";
     layer.fieldName = meta.fieldName || layer.fieldName || "";
@@ -96,15 +85,13 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       source: layer.source,
       fieldName: layer.fieldName,
     };
-
     const popupContent = L.DomUtil.create("div", "");
     const makeBtn = (label, color) => {
       const btn = L.DomUtil.create("button", "", popupContent);
       btn.innerText = label;
       btn.style.cssText = `margin:2px;padding:4px 8px;background:${color};color:white;border:none;border-radius:4px;cursor:pointer;`;
-      // Use direct call with fieldData to avoid React state timing issues
       btn.onclick = (ev) => {
-        ev.stopPropagation?.(); // avoid map click bubbling
+        ev.stopPropagation?.(); 
         saveField(fieldData, label);
       };
       return btn;
@@ -115,29 +102,19 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
 
     layer.bindPopup(popupContent).openPopup();
   };
-
-  // create layer from coords; accepts optional meta (uid, source, fieldName)
   const createLayerFromCoords = (coords, opts = {}, type = "polygon", meta = {}) => {
     if (!coords || coords.length < 2) return null;
     const latlngs = coords.map((c) => [c.lat, c.lng]);
     const layer = type === "polygon" ? L.polygon(latlngs, opts) : L.polyline(latlngs, opts);
-
-    // add to feature group or directly to map
     try {
       drawnFGRef.current && drawnFGRef.current.addLayer(layer);
     } catch {
       mapRef.current && layer.addTo(mapRef.current);
     }
-
-    // ensure popup attaches after Leaflet assigned _leaflet_id
-    // setTimeout 0 ensures the layer is fully initialized
     setTimeout(() => {
       attachPopup(layer, coords, type, meta);
     }, 0);
-
-    // also attach click to re-open popup with fresh fieldData later
     layer.on("click", () => {
-      // build fresh coords (in case layer was edited)
       let currentCoords;
       try {
         if (type === "polygon") currentCoords = layer.getLatLngs()[0].map(p => ({ lat: p.lat, lng: p.lng }));
@@ -150,8 +127,6 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
 
     return layer;
   };
-
-  // when user creates a new shape via draw control
   const onCreate = (e) => {
     const { layerType, layer } = e;
     if (!layer) return;
@@ -160,11 +135,8 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
     else if (layerType === "polyline") coords = layer.getLatLngs().map((p) => ({ lat: p.lat, lng: p.lng }));
     createLayerFromCoords(coords, { color: "orange", weight: 2, dashArray: "6 6" }, layerType, { source: "new" });
   };
-
-  // when remote/parent selects an existing field, create layer with its meta
   useEffect(() => {
     if (!selectedField) return;
-    // remove any previous preview by uid if desired (optional)
     const meta = { uid: selectedField.uid, source: selectedField.source, fieldName: selectedField.fieldName };
     createLayerFromCoords(selectedField.coords, { color: "orange", weight: 2, dashArray: "6 6" }, selectedField.type || "polygon", meta);
   }, [selectedField]);
