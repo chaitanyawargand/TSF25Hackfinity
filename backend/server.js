@@ -4,6 +4,7 @@ const passport = require('./auth/auth.js');
 const cors = require("cors");
 const authRoutes = require('./routes/authRoutes.js');
 const createNewField = require ('./routes/createNewField.js');
+const getFields = require('./routes/getFields.js')
 const app = express();
 
 
@@ -26,6 +27,7 @@ app.use(passport.session());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/newfield',createNewField);
+app.use('/getfields',getFields);
 
 app.listen(4000,()=>{
   console.log(`HTTP server running on port 4000`);

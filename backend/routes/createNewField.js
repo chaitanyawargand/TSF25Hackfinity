@@ -10,19 +10,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: "Invalid coordinates" });
     }
 
-    if (!id) {
-      return res.status(400).json({ error: "Field name is required" });
-    }
-
     const newField = await Field.create({
       boundary: coords, // store as JSON
-      id,
+      ownerId: id,
     });
 
     res.status(201).json({ message: "Field created successfully", field: newField });
   } catch (error) {
     console.error("Error creating field:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 });
 

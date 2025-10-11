@@ -12,8 +12,9 @@ const LoggedInHomePage = () => {
   const [missionCreated, setmissionCreated] = useState(false);
   const [Play, setPlay] = useState(true);
   const [newField, setnewField] = useState(false);
+  const [existingFields, setexistingFields] = useState([]);
   const socketRef = useRef(null);
-  const Id=useSelector((state)=>state.Id?.value);
+  const Id="8ac5064f-1481-47d5-8746-d07cddf57e24";
   // modals
   const [showMissionPopup, setShowMissionPopup] = useState(false); // choose existing/new
   const [showExistingPopup, setShowExistingPopup] = useState(false); // list of existing fields
@@ -23,26 +24,56 @@ const LoggedInHomePage = () => {
   const [selectedField, setSelectedField] = useState(null);
 
   // Dummy existing fields (replace with DB/API call later)
-  const existingFields = [
-    {
-      id: 1,
-      name: "Field A",
-      coords: [
-        { lat: 20.593, lng: 78.962 },
-        { lat: 20.595, lng: 78.963 },
-        { lat: 20.596, lng: 78.961 },
-      ],
-    },
-    {
-      id: 2,
-      name: "Field B",
-      coords: [
-        { lat: 20.598, lng: 78.965 },
-        { lat: 20.599, lng: 78.966 },
-        { lat: 20.601, lng: 78.964 },
-      ],
-    },
-  ];
+  // const existingFields = [
+  //   {
+  //     id: 1,
+  //     name: "Field A",
+  //     coords: [
+  //       { lat: 20.593, lng: 78.962 },
+  //       { lat: 20.595, lng: 78.963 },
+  //       { lat: 20.596, lng: 78.961 },
+  //     ],
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Field B",
+  //     coords: [
+  //       { lat: 20.598, lng: 78.965 },
+  //       { lat: 20.599, lng: 78.966 },
+  //       { lat: 20.601, lng: 78.964 },
+  //     ],
+  //   },
+  // ];
+
+useEffect(() => {
+  const ExistingFields = async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:4000/getfields",
+        { id: Id },
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const transformedFields = response.data.fields.map((f, index) => ({
+        id: f.id,
+        name: `Field ${String.fromCharCode(65 + index)}`, // Field A, B, C...
+        coords: f.boundary, // your boundary array
+      }));
+
+      setexistingFields(transformedFields);
+      console.log("Existing Fields:", transformedFields);
+
+    } catch (error) {
+      console.error("Error fetching fields:", error);
+    }
+  };
+
+  if (Id) ExistingFields();
+}, [Id]);
+
+  
 
   const [missions, setMissions] = useState([]);
   const dispatch = useDispatch();
@@ -88,39 +119,39 @@ const LoggedInHomePage = () => {
   //creating websocket connectiom
   const handleMissionCreated = async (mission) => {
     console.log("handlemissioncalled");
-    setMissions((prev) => [...prev, mission]);
-    setmissionCreated(true);
-    setNewMissionMode(false);
-    setDrawType(null);
-    console.log("nf",newField);
-    if(newField){
-      const payload= {
-        id:Id,
-        coords: missionData.coords
-      }
-      try {
-      const response = await axios.post("http://localhost:4000/newfield", payload, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    console.log("create new field: ",response);
-  } catch (error) {
-    console.error("ERROR", error);
-    throw error;
-  }
-    }
-    console.log("📤 Sending mission data:", mission);
+  //   setMissions((prev) => [...prev, mission]);
+  //   setmissionCreated(true);
+  //   setNewMissionMode(false);
+  //   setDrawType(null);
+  //   console.log("nf",newField);
+  //   if(newField){
+  //     const payload= {
+  //       id:Id,
+  //       coords: missionData.coords
+  //     }
+  //     try {
+  //     const response = await axios.post("http://localhost:4000/newfield", payload, {
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
+  //   console.log("create new field: ",response);
+  // } catch (error) {
+  //   console.error("ERROR", error);
+  //   throw error;
+  // }
+  //   }
+  //   console.log("📤 Sending mission data:", mission);
 
-    // ✅ Send mission data to backend WebSocket
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({
-        command: "NEW_MISSION",
-        data: mission,
-      }));
-    } else {
-      console.warn("⚠️ WebSocket not open; could not send mission data");
-    }
+  //   // ✅ Send mission data to backend WebSocket
+  //   if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+  //     socketRef.current.send(JSON.stringify({
+  //       command: "NEW_MISSION",
+  //       data: mission,
+  //     }));
+  //   } else {
+  //     console.warn("⚠️ WebSocket not open; could not send mission data");
+  //   }
   };
 
   // --- Playback controls ---
@@ -131,7 +162,8 @@ const LoggedInHomePage = () => {
     } else {
       console.warn("⚠️ WebSocket not connected");
     }
-  };  useEffect(() => {
+  };  
+  useEffect(() => {
     const socket = new WebSocket("ws://localhost:3000");
     socket.onopen = () =>{
       console.log("connected to websocket");
@@ -250,7 +282,7 @@ const LoggedInHomePage = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
           <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col gap-4 w-96">
             <h2 className="text-xl font-semibold text-gray-800">Select Existing Field</h2>
-            {existingFields.map((field) => (
+            {existingFields?.map((field) => (
               <button
                 key={field.id}
                 onClick={() => handleSelectExistingField(field)}
