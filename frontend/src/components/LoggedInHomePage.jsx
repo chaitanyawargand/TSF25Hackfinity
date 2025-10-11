@@ -1,14 +1,100 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { toggler } from "../features/isLoggedIn"; // adjust path as needed
+import { toggler } from "../features/isLoggedIn";
 import { Menu, X, LogOut } from "lucide-react";
+import Map from "./DroneMap";
 
 const LoggedInHomePage = () => {
+  const [newMissionMode, setNewMissionMode] = useState(false);
+  const [drawType, setDrawType] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // modals
+  const [showMissionPopup, setShowMissionPopup] = useState(false); // choose existing/new
+  const [showExistingPopup, setShowExistingPopup] = useState(false); // list of existing fields
+  const [showDrawTypePopup, setShowDrawTypePopup] = useState(false); // choose polygon/polyline for new field
+
+  // selected field object passed to Map (include timestamp so re-selection triggers)
+  const [selectedField, setSelectedField] = useState(null);
+
+  // Dummy existing fields (replace with DB/API call later)
+  const existingFields = [
+    {
+      id: 1,
+      name: "Field A",
+      coords: [
+        { lat: 20.593, lng: 78.962 },
+        { lat: 20.595, lng: 78.963 },
+        { lat: 20.596, lng: 78.961 },
+      ],
+    },
+    {
+      id: 2,
+      name: "Field B",
+      coords: [
+        { lat: 20.598, lng: 78.965 },
+        { lat: 20.599, lng: 78.966 },
+        { lat: 20.601, lng: 78.964 },
+      ],
+    },
+  ];
+
+  const [missions, setMissions] = useState([]);
   const dispatch = useDispatch();
-  const userName=useSelector((state)=>state.Name?.value);
-  const handleLogout = () => {
-    dispatch(toggler());
+  const userName = useSelector((state) => state.Name?.value);
+
+  const handleLogout = () => dispatch(toggler());
+
+  // Step 1: open existing/new choice popup
+  const startNewMission = () => {
+    setShowMissionPopup(true);
+  };
+
+  // Existing field flow: show list of existing fields
+  const chooseExistingField = () => {
+    setShowMissionPopup(false);
+    setShowExistingPopup(true);
+  };
+
+  // When a field is chosen from the list:
+  // - send that field to Map via selectedField prop
+  // - include timestamp to ensure Map effect runs even if same field chosen twice
+  const handleSelectExistingField = (field) => {
+    setShowExistingPopup(false);
+    setSelectedField({ ...field, _selectedAt: Date.now() }); // force new ref
+    // Ensure draw mode is off for existing field preview
+    setNewMissionMode(false);
+    setDrawType(null);
+  };
+
+  // New field flow: show draw-type popup (polygon / polyline)
+  const chooseNewField = () => {
+    setShowMissionPopup(false);
+    setShowDrawTypePopup(true);
+  };
+
+  // When user chooses draw type for new field
+  const selectDrawType = (type) => {
+    setDrawType(type);
+    setNewMissionMode(true); // enable drawing tools in Map
+    setShowDrawTypePopup(false);
+    setSelectedField(null); // clear any selected existing field
+  };
+
+  // Called by Map when it emits a created mission (save action)
+  const handleMissionCreated = (mission) => {
+    setMissions((prev) => [...prev, mission]);
+    console.log("Parent received mission:", mission);
+    // feedback:
+    window.alert(`Mission saved: ${mission.operation || mission.type} (${mission.fieldName || mission.id || ""})`);
+    // turn off drawing after save (optional)
+    setNewMissionMode(false);
+    setDrawType(null);
+  };
+
+  // Called by Map when it finished handling selectedField (either saved or cancelled)
+  const handleSelectedFieldHandled = () => {
+    setSelectedField(null);
   };
 
   return (
@@ -17,7 +103,7 @@ const LoggedInHomePage = () => {
       <div
         className={`fixed top-0 left-0 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } w-64 z-20`}
+        } w-64 z-50`}
       >
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold">Menu</h2>
@@ -30,46 +116,112 @@ const LoggedInHomePage = () => {
           <a href="#" className="block text-gray-700 hover:text-blue-600">
             View Previous Missions
           </a>
-          
         </nav>
       </div>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="flex justify-between items-center bg-white shadow px-6 py-3">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-gray-700 hover:text-gray-900"
-          >
+        <header className="flex justify-between items-center bg-white shadow px-6 py-3 z-40">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-700 hover:text-gray-900">
             <Menu size={28} />
           </button>
 
-          <h1 className="text-lg font-semibold text-gray-800">
-           {`Dashboard`}
-          </h1>
-        
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium"
-          >
-            <LogOut size={20} />
-            Logout
-          </button>
+          <h1 className="text-lg font-semibold text-gray-800">{`Dashboard`}</h1>
+
+          <div className="flex items-center gap-4">
+            <button
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium transition-colors"
+              onClick={startNewMission}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Mission
+            </button>
+
+            <button onClick={handleLogout} className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium">
+              <LogOut size={20} />
+              Logout
+            </button>
+          </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-6">
-        
-        </main>
+        {/* Map container */}
+        <div className="relative h-screen w-screen overflow-hidden">
+          <div className="absolute inset-0 z-0">
+            <Map
+              newMissionMode={newMissionMode}
+              drawType={drawType}
+              selectedField={selectedField}
+              onMissionCreated={handleMissionCreated}
+              onSelectedFieldHandled={handleSelectedFieldHandled}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Overlay for mobile when sidebar open */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black opacity-40 z-10"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
+      {/* Sidebar overlay */}
+      {sidebarOpen && <div className="fixed inset-0 bg-black opacity-40 z-30" onClick={() => setSidebarOpen(false)}></div>}
+
+      {/* Step 1 modal: choose Existing or New */}
+      {showMissionPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center gap-6 w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Start a New Mission</h2>
+            <div className="flex gap-4 w-full">
+              <button onClick={chooseExistingField} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg font-bold text-lg">
+                Existing Field
+              </button>
+              <button onClick={chooseNewField} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-bold text-lg">
+                New Field
+              </button>
+            </div>
+            <button onClick={() => setShowMissionPopup(false)} className="mt-4 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2 modal: list of existing fields */}
+      {showExistingPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col gap-4 w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Select Existing Field</h2>
+            {existingFields.map((field) => (
+              <button
+                key={field.id}
+                onClick={() => handleSelectExistingField(field)}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-semibold transition"
+              >
+                {field.name}
+              </button>
+            ))}
+            <button onClick={() => setShowExistingPopup(false)} className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Draw type modal for NEW field (polygon / polyline) */}
+      {showDrawTypePopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col gap-4 w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Select Draw Type</h2>
+            <div className="flex gap-4 w-full">
+              <button onClick={() => selectDrawType("polygon")} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold">
+                Polygon
+              </button>
+              <button onClick={() => selectDrawType("polyline")} className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-semibold">
+                Polyline
+              </button>
+            </div>
+            <button onClick={() => setShowDrawTypePopup(false)} className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold">
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

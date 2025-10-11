@@ -20,7 +20,7 @@ const TypeRouter = () => {
   if(type==='user'){
     routes = createRoutesFromElements(
       <>
-        {isLoggedIn?<Route path="/" element={<LoggedInHomePage/>} />:<Route path="/" element={<Map/>} />}
+        {isLoggedIn?<Route path="/" element={<LoggedInHomePage/>} />:<Route path="/" element={<LoggedInHomePage/>} />}
         <Route path="/oauth-success" element={<OAuthSuccess />} />
         <Route path="/userlogin" element={<JwtLogin />} />
       </>
