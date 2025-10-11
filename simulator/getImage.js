@@ -6,7 +6,7 @@ export async function sendImageToFastAPI(imagePath) {
   const form = new FormData();
   form.append("file", fs.createReadStream(imagePath)); // send as UploadFile
 
-  const response = await axios.post("http://http://127.0.0.1:8000/predict", form, {
+  const response = await axios.post("http://127.0.0.1:8000/predict", form, {
     headers: form.getHeaders(),
   });
 
