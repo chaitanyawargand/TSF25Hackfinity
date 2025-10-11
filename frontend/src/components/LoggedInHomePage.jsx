@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toggler } from "../features/isLoggedIn";
 import { Menu, X, LogOut } from "lucide-react";
 import Map from "./DroneMap";
+import axios from "axios";
 
 const LoggedInHomePage = () => {
   const [newMissionMode, setNewMissionMode] = useState(false);
   const [drawType, setDrawType] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [missionCreated, setmissionCreated] = useState(false);
+  const [Play, setPlay] = useState(true);
+  const socketRef = useRef(null);
+
 
   // modals
   const [showMissionPopup, setShowMissionPopup] = useState(false); // choose existing/new
@@ -81,16 +86,62 @@ const LoggedInHomePage = () => {
     setSelectedField(null); // clear any selected existing field
   };
 
-  // Called by Map when it emits a created mission (save action)
-  const handleMissionCreated = (mission) => {
+
+  //creating websocket connectiom
+  const handleMissionCreated = async (mission) => {
     setMissions((prev) => [...prev, mission]);
-    console.log("Parent received mission:", mission);
-    // feedback:
-    window.alert(`Mission saved: ${mission.operation || mission.type} (${mission.fieldName || mission.id || ""})`);
-    // turn off drawing after save (optional)
+    setmissionCreated(true);
     setNewMissionMode(false);
     setDrawType(null);
+    //inserted into fiel
+    if(mission.source!="drawn"){
+      try {
+      const response = await axios.post("http://localhost:3000/newfield", missionData.coords, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    console.log("success");
+  } catch (error) {
+    console.error("ERROR", error);
+    throw error;
+  }
+    }
+    console.log("📤 Sending mission data:", mission);
+
+    // ✅ Send mission data to backend WebSocket
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        command: "NEW_MISSION",
+        data: mission,
+      }));
+    } else {
+      console.warn("⚠️ WebSocket not open; could not send mission data");
+    }
   };
+
+  // --- Playback controls ---
+  const sendCommand = (cmd) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ command: cmd }));
+      console.log(`📤 Sent command: ${cmd}`);
+    } else {
+      console.warn("⚠️ WebSocket not connected");
+    }
+  };  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:4000");
+    socket.onopen = () =>{
+      console.log("connected to websocket");
+    }
+
+    socket.onmessage = (event) =>{
+      const msg=JSON.parse(event.data);
+
+    }
+    return () => {
+      socket.close();
+    }
+  }, [])
 
   // Called by Map when it finished handling selectedField (either saved or cancelled)
   const handleSelectedFieldHandled = () => {
@@ -129,7 +180,7 @@ const LoggedInHomePage = () => {
           <h1 className="text-lg font-semibold text-gray-800">{`Dashboard`}</h1>
 
           <div className="flex items-center gap-4">
-            <button
+            {!missionCreated && <button
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium transition-colors"
               onClick={startNewMission}
             >
@@ -137,7 +188,15 @@ const LoggedInHomePage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               New Mission
-            </button>
+            </button>}
+
+            {missionCreated && <div>
+              {Play&&<button onClick={() => { setPlay(true); sendCommand("PLAY"); }}>Play</button>}
+              {!Play && <button onClick={() => { setPlay(false); sendCommand("PAUSE"); }}>Pause</button>}
+              <button onClick={() => sendCommand("ABORT")}>Abort</button>
+            </div>
+
+            }
 
             <button onClick={handleLogout} className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium">
               <LogOut size={20} />

@@ -1,6 +1,6 @@
 const express = require('express');
-const passport = require('../auth/auth.js');
 const router = express.Router();
+const passport = require('../auth/auth.js');
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const {User} =require("../Datatypes/User.js");

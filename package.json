@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "leaflet-geosearch": "^4.2.2"
+    "http": "^0.0.1-security",
+    "leaflet-geosearch": "^4.2.2",
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-draw": "^0.21.0",
+    "ws": "^8.18.3"
   }
 }
