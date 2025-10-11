@@ -1,5 +1,12 @@
 {
   "dependencies": {
-    "leaflet-geosearch": "^4.2.2"
+    "child_process": "^1.0.2",
+    "fs": "^0.0.1-security",
+    "http": "^0.0.1-security",
+    "leaflet-geosearch": "^4.2.2",
+    "path": "^0.12.7",
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-draw": "^0.21.0",
+    "ws": "^8.18.3"
   }
 }

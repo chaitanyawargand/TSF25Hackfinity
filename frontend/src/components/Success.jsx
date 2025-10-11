@@ -13,6 +13,7 @@ function OAuthSuccess() {
     const userStr = params.get("user");
     if (userStr) {
       const user = JSON.parse(decodeURIComponent(userStr));
+      dispatch(setID(user.id));
       dispatch(setName(user.displayName));
       dispatch(setEmail(user.email));
     }

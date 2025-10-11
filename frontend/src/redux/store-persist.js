@@ -3,20 +3,18 @@ import storage from "redux-persist/lib/storage"; // to localStorage
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import { combineReducers } from "redux";
 
-// import City from "../features/City"
 import Name from "../features/Name";
 import Email from "../features/Email";
-// import Image from "../features/Image";
-// import Wallet from "../features/Wallet";
+import Id from "../features/Id.js";
 import isLoggedIn from "../features/isLoggedIn";
-// import vendorId from "../features/vendorId";
 import Type from "../features/Type.js";
 
 const rootReducer = combineReducers({
     Type,
     Name,
     Email,
-    isLoggedIn
+    isLoggedIn,
+    Id
 });
 
 const persistConfig = {

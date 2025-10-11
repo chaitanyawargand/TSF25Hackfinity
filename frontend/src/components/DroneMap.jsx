@@ -8,34 +8,98 @@ import {
 } from "react-leaflet";
 import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
+import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
+import { useSelector } from "react-redux";
 
 function LocationMarker() {
   const [position, setPosition] = useState(null);
   const map = useMap();
+
   useEffect(() => {
     map.locate({ setView: true, maxZoom: 16 });
     map.on("locationfound", (e) => setPosition(e.latlng));
   }, [map]);
+
   return position ? <Marker position={position} /> : null;
 }
 
 function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
   const [savedFields, setSavedFields] = useState([]);
+  const [CurrentField, setCurrentField] = useState(null);
   const mapRef = useRef(null);
   const drawnFGRef = useRef(null);
+  const previewLayerRef = useRef(null);
+  const socketRef = useRef(null);
+  const Id = useSelector((state) => state.Id?.value);
+
+  // WebSocket setup
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:3000");
+    socketRef.current = socket;
+
+    socket.onopen = () => console.log("🟢 Connected to WebSocket");
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      console.log("📩 Received WS message:", msg);
+    };
+
+    socket.onerror = (err) => console.error("⚠️ WebSocket error:", err);
+
+    socket.onclose = () => console.log("🔴 WebSocket closed");
+
+    return () => {
+      if (socketRef.current) socketRef.current.close();
+    };
+  }, []);
 
   const handleMapCreated = (mapInstance) => {
     mapRef.current = mapInstance;
   };
+
+  const handleMissionCreated = async (mission) => {
+    console.log("handleMissionCalled:", mission);
+
+    if (mission.source === "new") {
+      const payload = {
+        id: "8ac5064f-1481-47d5-8746-d07cddf57e24", // ownerId
+        coords: mission.coords,
+      };
+      console.log("Payload to backend:", payload);
+
+      try {
+        const response = await axios.post(
+          "http://localhost:4000/newfield",
+          payload,
+          { headers: { "Content-Type": "application/json" } }
+        );
+        console.log("Field created:", response.data);
+      } catch (error) {
+        console.error("ERROR creating field:", error);
+        throw error;
+      }
+    }
+
+    // Send mission data via WebSocket
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({ command: "NEW_MISSION", data: mission })
+      );
+    }
+  };
+
   const saveField = (fieldData, operation) => {
     if (!fieldData) return;
-    const { coords, layer, type, source = "existing", fieldName = "", uid } = fieldData;
+    const { coords, layer, type, source = "existing", uid } = fieldData;
     const finalUid = uid || Date.now();
-    const fieldObj = { uid: finalUid, coords, operation, type, source, fieldName };
+
+    const fieldObj = { uid: finalUid, coords, operation, type, source };
 
     console.log("Saving field:", fieldObj);
+
+    handleMissionCreated(fieldObj);
 
     setSavedFields((prev) => {
       const idx = prev.findIndex((f) => f.uid === finalUid);
@@ -51,12 +115,11 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
 
       let latlng;
       try {
-        if (type === "polygon") latlng = layer.getBounds().getCenter();
-        else {
-          const latlngs = layer.getLatLngs();
-          latlng = Array.isArray(latlngs) ? latlngs[Math.floor(latlngs.length / 2)] : layer.getLatLng();
-        }
-      } catch (err) {
+        latlng =
+          type === "polygon"
+            ? layer.getBounds().getCenter()
+            : layer.getLatLngs()[Math.floor(layer.getLatLngs().length / 2)];
+      } catch {
         latlng = null;
       }
       if (latlng) {
@@ -69,13 +132,14 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       if (layer._popup) layer.closePopup();
     }
 
+    previewLayerRef.current = null;
+    setCurrentField(null);
     if (onFieldSaved) onFieldSaved(fieldObj);
   };
   const attachPopup = (layer, coords, type, meta = {}) => {
     const uid = meta.uid || layer._leaflet_id || Date.now();
     layer._uid = uid;
-    layer.source = meta.source || layer.source || "existing";
-    layer.fieldName = meta.fieldName || layer.fieldName || "";
+    layer.source = meta.source || "existing";
 
     const fieldData = {
       uid,
@@ -83,7 +147,6 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       layer,
       type,
       source: layer.source,
-      fieldName: layer.fieldName,
     };
     const popupContent = L.DomUtil.create("div", "");
     const makeBtn = (label, color) => {
@@ -91,7 +154,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       btn.innerText = label;
       btn.style.cssText = `margin:2px;padding:4px 8px;background:${color};color:white;border:none;border-radius:4px;cursor:pointer;`;
       btn.onclick = (ev) => {
-        ev.stopPropagation?.(); 
+        ev.stopPropagation?.();
         saveField(fieldData, label);
       };
       return btn;
@@ -111,14 +174,16 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
     } catch {
       mapRef.current && layer.addTo(mapRef.current);
     }
-    setTimeout(() => {
-      attachPopup(layer, coords, type, meta);
-    }, 0);
+
+    setTimeout(() => attachPopup(layer, coords, type, meta), 0);
+
     layer.on("click", () => {
       let currentCoords;
       try {
-        if (type === "polygon") currentCoords = layer.getLatLngs()[0].map(p => ({ lat: p.lat, lng: p.lng }));
-        else currentCoords = layer.getLatLngs().map(p => ({ lat: p.lat, lng: p.lng }));
+        currentCoords =
+          type === "polygon"
+            ? layer.getLatLngs()[0].map((p) => ({ lat: p.lat, lng: p.lng }))
+            : layer.getLatLngs().map((p) => ({ lat: p.lat, lng: p.lng }));
       } catch {
         currentCoords = coords;
       }
@@ -135,22 +200,18 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
     else if (layerType === "polyline") coords = layer.getLatLngs().map((p) => ({ lat: p.lat, lng: p.lng }));
     createLayerFromCoords(coords, { color: "orange", weight: 2, dashArray: "6 6" }, layerType, { source: "new" });
   };
+
+  const onDeleted = (e) => {
+    const removed = [];
+    e.layers.eachLayer((layer) => removed.push(layer._leaflet_id || layer._uid));
+    if (removed.length) setSavedFields((prev) => prev.filter((f) => !removed.includes(f.uid)));
+  };
+
   useEffect(() => {
     if (!selectedField) return;
     const meta = { uid: selectedField.uid, source: selectedField.source, fieldName: selectedField.fieldName };
     createLayerFromCoords(selectedField.coords, { color: "orange", weight: 2, dashArray: "6 6" }, selectedField.type || "polygon", meta);
   }, [selectedField]);
-
-  const onDeleted = (e) => {
-    const removed = [];
-    e.layers.eachLayer((layer) => {
-      if (layer._leaflet_id) removed.push(layer._leaflet_id);
-      else if (layer._uid) removed.push(layer._uid);
-    });
-    if (removed.length) {
-      setSavedFields((prev) => prev.filter((f) => !removed.includes(f.uid)));
-    }
-  };
 
   return (
     <div className="relative w-full h-screen">
