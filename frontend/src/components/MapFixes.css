@@ -1,0 +1,16 @@
+.leaflet-draw-toolbar {
+  z-index: 1000 !important;
+}
+
+.leaflet-draw-tooltip {
+  z-index: 1001 !important;
+}
+.leaflet-draw-toolbar a {
+  background-color: white !important;
+  border-radius: 6px !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background-color: #e5e7eb !important;
+}
