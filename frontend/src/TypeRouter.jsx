@@ -9,6 +9,7 @@ import React from 'react'
 import HomePage from "./components/HomePage";
 import LoggedInHomePage from "./components/LoggedInHomePage";
 import OAuthSuccess from "./components/Success.jsx";
+import JwtLogin from "./components/jwtLogin.jsx";
 const TypeRouter = () => {
   const type = useSelector((state) => state.Type?.value);
   let isLoggedIn = useSelector((state)=>state.isLoggedIn?.value);
@@ -19,6 +20,7 @@ const TypeRouter = () => {
       <>
         {isLoggedIn?<Route path="/" element={<LoggedInHomePage/>} />:<Route path="/" element={<HomePage />} />}
         <Route path="/oauth-success" element={<OAuthSuccess />} />
+        <Route path="/userlogin" element={<JwtLogin />} />
       </>
     );
   }
