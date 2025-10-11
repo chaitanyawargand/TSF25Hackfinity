@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-
+from predict_plant_health import predict_image
 app = FastAPI()
 
 # Enable CORS if Node.js frontend/backend is on a different port
@@ -24,6 +24,9 @@ async def predict(file: UploadFile = File(...)):
     result = predict_image(image_bytes)  # returns class name
     
     # Optionally, convert to yes/no
-    yes_no = "yes" if result == "Car" else "no"  # example mapping
+    if(result=="healthy"):
+        return 1
     
-    return {"prediction": yes_no}
+    else:
+        return 0
+    
