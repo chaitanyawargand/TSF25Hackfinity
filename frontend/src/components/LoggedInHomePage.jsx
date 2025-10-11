@@ -11,9 +11,9 @@ const LoggedInHomePage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [missionCreated, setmissionCreated] = useState(false);
   const [Play, setPlay] = useState(true);
+  const [newField, setnewField] = useState(false);
   const socketRef = useRef(null);
-
-
+  const Id=useSelector((state)=>state.Id?.value);
   // modals
   const [showMissionPopup, setShowMissionPopup] = useState(false); // choose existing/new
   const [showExistingPopup, setShowExistingPopup] = useState(false); // list of existing fields
@@ -59,17 +59,15 @@ const LoggedInHomePage = () => {
   const chooseExistingField = () => {
     setShowMissionPopup(false);
     setShowExistingPopup(true);
+    setnewField(false);
   };
 
-  // When a field is chosen from the list:
-  // - send that field to Map via selectedField prop
-  // - include timestamp to ensure Map effect runs even if same field chosen twice
   const handleSelectExistingField = (field) => {
     setShowExistingPopup(false);
-    setSelectedField({ ...field, _selectedAt: Date.now() }); // force new ref
-    // Ensure draw mode is off for existing field preview
+    setSelectedField({ ...field, _selectedAt: Date.now() });
     setNewMissionMode(false);
     setDrawType(null);
+    setnewField(true);
   };
 
   // New field flow: show draw-type popup (polygon / polyline)
@@ -89,19 +87,24 @@ const LoggedInHomePage = () => {
 
   //creating websocket connectiom
   const handleMissionCreated = async (mission) => {
+    console.log("handlemissioncalled");
     setMissions((prev) => [...prev, mission]);
     setmissionCreated(true);
     setNewMissionMode(false);
     setDrawType(null);
-    //inserted into fiel
-    if(mission.source!="drawn"){
+    console.log("nf",newField);
+    if(newField){
+      const payload= {
+        id:Id,
+        coords: missionData.coords
+      }
       try {
-      const response = await axios.post("http://localhost:3000/newfield", missionData.coords, {
+      const response = await axios.post("http://localhost:4000/newfield", payload, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-    console.log("success");
+    console.log("create new field: ",response);
   } catch (error) {
     console.error("ERROR", error);
     throw error;
@@ -129,7 +132,7 @@ const LoggedInHomePage = () => {
       console.warn("⚠️ WebSocket not connected");
     }
   };  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:4000");
+    const socket = new WebSocket("ws://localhost:3000");
     socket.onopen = () =>{
       console.log("connected to websocket");
     }

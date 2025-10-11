@@ -1,8 +1,8 @@
 const WebSocket = require("ws");
 
 // Create WebSocket server
-const wss = new WebSocket.Server({ port: 4000 }, () => {
-  console.log("WebSocket server running on ws://localhost:4000");
+const wss = new WebSocket.Server({ port: 3000 }, () => {
+  console.log("WebSocket server running on ws://localhost:3000");
 });
 
 // Sample function to generate fake telemetry data

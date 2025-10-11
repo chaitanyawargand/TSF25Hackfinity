@@ -27,6 +27,6 @@ app.use(passport.session());
 app.use('/auth', authRoutes);
 app.use('/newfield',createNewField);
 
-server.listen(4000,()=>{
-  console.log(`HTTP + WebSocket server running on port 4000`);
+app.listen(4000,()=>{
+  console.log(`HTTP server running on port 4000`);
 })

@@ -55,7 +55,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       }
       layer.closePopup();
     }
-    console.log(saveField);
+    console.log("field object", fieldObj);
     previewLayerRef.current = null;
     setCurrentField(null);
     if (onFieldSaved) onFieldSaved(fieldObj);
