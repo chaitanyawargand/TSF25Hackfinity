@@ -1,7 +1,7 @@
 # TSF25Hackfinity
 
 > A full-stack multi-service system combining a React-based map UI, a Node.js backend with WebSocket, a FastAPI image-service, and a native simulator for mission/telemetry streaming.
-# DEMO VIDEO LINK - [https://drive.google.com/file/d/19NRyromuNlRJYJmVLdfSrNabU6TP7Zb5/view?usp=sharing](Link)
+# DEMO VIDEO LINK - [Link](https://drive.google.com/file/d/19NRyromuNlRJYJmVLdfSrNabU6TP7Zb5/view?usp=sharing)
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
