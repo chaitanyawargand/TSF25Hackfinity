@@ -16,10 +16,7 @@
   - [Frontend (React)](#frontend-react)  
 - [Configuration & Environment Variables](#configuration--environment-variables)  
 - [API & WebSocket Interface](#api--websocket-interface)  
-- [Developer Workflows & Tips](#developer-workflows--tips)  
-- [Troubleshooting](#troubleshooting)  
-- [Contributing](#contributing)  
-- [Authors & License](#authors--license)
+- [Developer Workflows & Tips](#developer-workflows--tips)
 
 ---
 
@@ -220,4 +217,4 @@ SIMULATOR_PATH=../simulator/simulator
 - Open a pull request with a description of changes
 - Please follow consistent naming, code style, and update this README if you add or modify APIs.
 
-
+Made With <3 by Rishab, Chaitany, Rutuj, Yashwant and Niharika
