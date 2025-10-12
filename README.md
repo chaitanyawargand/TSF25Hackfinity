@@ -222,6 +222,8 @@ The **FastAPI microservice** integrates two machine learning pipelines designed 
 - **Output**: Image bytes containing an overlay showing detected weed regions  
 - **Deployment**: Inference is served through the FastAPI service, producing real-time visual overlays for the frontend map view  
 - **Weights**: Stored as a GitHub release asset due to file size (>100 MB)
+- <img width="326" height="85" alt="image" src="https://github.com/user-attachments/assets/89938f8d-b063-4ed5-94fb-64d5255942ac" />
+
 
 ### 2. Crop Disease Classification (MobileNetV2)
 
