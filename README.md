@@ -134,10 +134,10 @@ SIMULATOR_PATH=../simulator/simulator
 
 ## Contributing
 
--Fork the repository
--Create a feature branch: git checkout -b feat/your-feature
--Write your code, add tests, update docs
--Open a pull request with a description of changes
--Please follow consistent naming, code style, and update this README if you add or modify APIs.
+- Fork the repository
+- Create a feature branch: git checkout -b feat/your-feature
+- Write your code, add tests, update docs
+- Open a pull request with a description of changes
+- Please follow consistent naming, code style, and update this README if you add or modify APIs.
 
 
