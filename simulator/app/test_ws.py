@@ -2,20 +2,23 @@ import asyncio
 import websockets
 import json
 
-async def test_telemetry():
-    uri = "ws://localhost:8000/ws/telemetry/test-mission"
-    async with websockets.connect(uri) as websocket:
-        try:
+async def main():
+    uri = "ws://localhost:8000/ws/telemetry"
+    async with websockets.connect(uri) as ws:
+        mission_id = input("Enter mission ID: ")
+        await ws.send(json.dumps({"mission_id": mission_id}))
+
+        async def sender():
             while True:
-                message = await websocket.recv()
-                data = json.loads(message)
-                print(data)
+                cmd = input("Command (pause/resume/abort): ").strip()
+                await ws.send(json.dumps({"command": cmd}))
+                if cmd == "abort":
+                    break
 
-                # Example: send pause/resume commands
-                # await websocket.send(json.dumps({"command": "pause"}))
-                # await asyncio.sleep(2)
-                # await websocket.send(json.dumps({"command": "resume"}))
-        except KeyboardInterrupt:
-            print("Test stopped")
+        async def receiver():
+            async for msg in ws:
+                print("Received:", msg)
 
-asyncio.run(test_telemetry())
+        await asyncio.gather(sender(), receiver())
+
+asyncio.run(main())

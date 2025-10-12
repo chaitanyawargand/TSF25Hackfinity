@@ -11,10 +11,10 @@ const Field = sequelize.define('Field', {
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   boundary: {
-    type: DataTypes.GEOMETRY('POLYGON'),
+    type: DataTypes.JSONB,
     allowNull: false,
   },
 }, {

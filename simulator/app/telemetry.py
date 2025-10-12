@@ -1,53 +1,94 @@
-import asyncio, random
+# app/telemetry_simulator.py
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import asyncio
+import random
+import json
 from datetime import datetime
 
-app = FastAPI()
+app = FastAPI(title="Telemetry Simulator")
 
-@app.websocket("/ws/telemetry/{mission_id}")
-async def telemetry_ws(websocket: WebSocket, mission_id: str):
+mission_states = {}
+
+@app.websocket("/ws/telemetry")
+async def telemetry_ws(websocket: WebSocket):
     await websocket.accept()
-    lat, lon, alt, speed, battery = 28.6139, 77.2090, 100, 5, 100
-    paused = False
-    
+    print("Client connected, waiting for mission_id...")
+
     try:
-        while True:
-            # send telemetry if not paused
-            if not paused:
-                lat += random.uniform(-0.0001, 0.0001)
-                lon += random.uniform(-0.0001, 0.0001)
-                alt += random.uniform(-0.5, 0.5)
-                speed += random.uniform(-0.2, 0.2)
-                battery -= 0.05
+        # Wait for client to send initial mission_id
+        msg = await websocket.receive_text()
+        data = json.loads(msg)
+        mission_id = data.get("mission_id")
 
-                telemetry = {
-                    "mission_id": mission_id,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "lat": round(lat, 6),
-                    "lon": round(lon, 6),
-                    "altitude": round(alt, 2),
-                    "speed": round(speed, 2),
-                    "battery": round(battery, 2)
-                }
+        if not mission_id:
+            await websocket.send_json({"error": "Mission ID required"})
+            await websocket.close()
+            return
 
-                await websocket.send_json(telemetry)
+        # Initialize mission state
+        mission_states[mission_id] = {"paused": False, "aborted": False}
+        state = mission_states[mission_id]
 
-            # sleep 500ms
-            await asyncio.sleep(0.5)
+        await websocket.send_json({"status": f"Mission {mission_id} connected"})
+        print(f"[{mission_id}] Mission initialized and telemetry starting")
 
-            # check for commands without blocking
+        # Initial telemetry values
+        lat, lon, alt, speed, battery = 28.6139, 77.2090, 100, 5, 100
+
+        async def receive_commands():
             try:
-                msg = await asyncio.wait_for(websocket.receive_json(), timeout=0.01)
-                cmd = msg.get("command")
-                if cmd == "pause":
-                    paused = True
-                elif cmd == "resume":
-                    paused = False
-                elif cmd == "abort":
-                    break
-            except asyncio.TimeoutError:
-                # no message received → continue sending telemetry
-                pass
+                while True:
+                    msg = await websocket.receive_text()
+                    data = json.loads(msg)
+                    cmd = data.get("command", "").lower()
 
-    except WebSocketDisconnect:
-        print(f"Mission {mission_id} disconnected")
+                    if cmd == "pause":
+                        state["paused"] = True
+                        print(f"[{mission_id}] Paused")
+                    elif cmd == "resume":
+                        state["paused"] = False
+                        print(f"[{mission_id}] Resumed")
+                    elif cmd == "abort":
+                        state["aborted"] = True
+                        print(f"[{mission_id}] Aborted")
+                        break
+            except WebSocketDisconnect:
+                print(f"[{mission_id}] Command channel closed")
+                state["aborted"] = True
+
+        # Run command listener concurrently
+        cmd_task = asyncio.create_task(receive_commands())
+
+        try:
+            while not state["aborted"]:
+                if not state["paused"]:
+                    lat += random.uniform(-0.0001, 0.0001)
+                    lon += random.uniform(-0.0001, 0.0001)
+                    alt += random.uniform(-0.5, 0.5)
+                    speed += random.uniform(-0.2, 0.2)
+                    battery = max(0, battery - 0.05)
+
+                    telemetry = {
+                        "mission_id": mission_id,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "lat": round(lat, 6),
+                        "lon": round(lon, 6),
+                        "altitude": round(alt, 2),
+                        "speed": round(speed, 2),
+                        "battery": round(battery, 2),
+                    }
+
+                    await websocket.send_json(telemetry)
+
+                await asyncio.sleep(0.5)
+
+        except WebSocketDisconnect:
+            print(f"[{mission_id}] Telemetry disconnected")
+        finally:
+            cmd_task.cancel()
+            mission_states.pop(mission_id, None)
+            print(f"[{mission_id}] Session ended")
+
+    except Exception as e:
+        print("Error:", e)
+        await websocket.close()

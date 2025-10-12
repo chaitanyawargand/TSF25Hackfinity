@@ -1,138 +1,274 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toggler } from "../features/isLoggedIn";
 import { Menu, X, LogOut } from "lucide-react";
-import Map from './DroneMap'
-
+import Map from "./DroneMap";
+import axios from "axios";
 
 const LoggedInHomePage = () => {
   const [newMissionMode, setNewMissionMode] = useState(false);
-   const [drawType, setDrawType] = useState(null); 
+  const [drawType, setDrawType] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showPopup, setShowPopup] = useState(false); 
+  const [missionCreated, setMissionCreated] = useState(false);
+  const [Play, setPlay] = useState(true);
+  const [newField, setNewField] = useState(false);
+  const [existingFields, setExistingFields] = useState([]);
+  const [battery, setBattery] = useState(100);
+  const [prediction, setPredicton] = useState(1);
+  const [altitude, setAltitude] = useState(0);
+  const [speed, setSpeed] = useState(0);
+
+  const socketRef = useRef(null);
+  const Id = "8ac5064f-1481-47d5-8746-d07cddf57e24";
+
+  // modals
+  const [showMissionPopup, setShowMissionPopup] = useState(false);
+  const [showExistingPopup, setShowExistingPopup] = useState(false);
+  const [showDrawTypePopup, setShowDrawTypePopup] = useState(false);
+
+  // selected field object passed to Map
+  const [selectedField, setSelectedField] = useState(null);
+
+  useEffect(() => {
+    const ExistingFields = async () => {
+      try {
+        const response = await axios.post(
+          "http://localhost:4000/getfields",
+          { id: Id },
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        const transformedFields = response.data.fields.map((f, index) => ({
+          id: f.id,
+          name: `Field ${String.fromCharCode(65 + index)}`,
+          coords: f.boundary,
+        }));
+
+        setExistingFields(transformedFields);
+        console.log("Existing Fields:", transformedFields);
+      } catch (error) {
+        console.error("Error fetching fields:", error);
+      }
+    };
+
+    if (Id) ExistingFields();
+  }, [Id]);
+
+  const [missions, setMissions] = useState([]);
   const dispatch = useDispatch();
-  const userName=useSelector((state)=>state.Name?.value);
-  const handleLogout = () => {
-    dispatch(toggler());
+  const userName = useSelector((state) => state.Name?.value);
+
+  const handleLogout = () => dispatch(toggler());
+
+  // --- Mission Flow ---
+  const startNewMission = () => setShowMissionPopup(true);
+
+  const chooseExistingField = () => {
+    setShowMissionPopup(false);
+    setShowExistingPopup(true);
+    setNewField(false);
   };
-    const startNewMission = () => {
-    setShowPopup(true);
+
+  const handleSelectExistingField = (field) => {
+    setShowExistingPopup(false);
+    setSelectedField({ ...field, _selectedAt: Date.now() });
+    setNewMissionMode(false);
+    setDrawType(null);
+    setNewField(true);
   };
-   const selectDrawType = (type) => {
+
+  const chooseNewField = () => {
+    setShowMissionPopup(false);
+    setShowDrawTypePopup(true);
+  };
+
+  const selectDrawType = (type) => {
     setDrawType(type);
-    setNewMissionMode(true); 
-    setShowPopup(false);
+    setNewMissionMode(true);
+    setShowDrawTypePopup(false);
+    setSelectedField(null);
   };
+
+  // --- WebSocket / Mission Controls ---
+  const handleMissionCreated = async (mission) => {
+    console.log("Mission Created", mission);
+    setMissionCreated(true);
+    setNewMissionMode(false);
+    setDrawType(null);
+
+    // send mission to backend WS
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ command: "NEW_MISSION", data: mission }));
+    }
+  };
+
+  const sendCommand = (cmd) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ command: cmd }));
+      console.log(`Sent command: ${cmd}`);
+    }
+  };
+
+  useEffect(() => {
+    
+    console.log("!!!!!!!!!!mission has been created");
+  }, [missionCreated])
+  
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:3000");
+    socketRef.current = socket;
+
+    socket.onopen = () => console.log("Connected to WebSocket");
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      console.log(msg);
+      if (msg.type === "TELEMETRY") {
+        setPredicton(msg.telemetry.prediction);
+        setBattery(msg.telemetry.battery);
+        setAltitude(msg.telemetry.altitude);
+        setSpeed(msg.telemetry.speed);
+      }
+      if(msg.type==="BATTERY"){
+        alert("Battery Over");
+      }
+    };
+
+    return () => socket.close();
+  }, []);
+
+  const handleSelectedFieldHandled = () => setSelectedField(null);
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <div
-        className={`fixed top-0 z-50 left-0 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } w-64 z-20`}
+        } w-64 z-50`}
       >
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold">Menu</h2>
-          <button onClick={() => setSidebarOpen(false)}>
-            <X size={24} />
-          </button>
+          <button onClick={() => setSidebarOpen(false)}><X size={24} /></button>
         </div>
-
         <nav className="p-4 space-y-3">
-          <a href="#" className="block text-gray-700 hover:text-blue-600">
-            View Previous Missions
-          </a>
-          
+          <a href="#" className="block text-gray-700 hover:text-blue-600">View Previous Missions</a>
         </nav>
       </div>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="flex justify-between items-center bg-white shadow px-6 py-3 z-40">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-gray-700 hover:text-gray-900"
-          >
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-700 hover:text-gray-900">
             <Menu size={28} />
           </button>
+          <h1 className="text-lg font-semibold text-gray-800">Dashboard</h1>
 
-          <h1 className="text-lg font-semibold text-gray-800">
-           {`Dashboard`}
-          </h1>
-           <div className="flex items-center gap-4">
-    {/* New Mission Button */}
-    <button
-      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium transition-colors"
-      onClick={startNewMission}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
-      New Mission
-    </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium"
-          >
-            <LogOut size={20} />
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Mission Buttons */}
+            {!missionCreated && (
+              <button
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-medium transition-colors"
+                onClick={startNewMission}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New Mission
+              </button>
+            )}
+
+            {missionCreated && (
+              <div className="flex items-center gap-2">
+                {Play ? (
+                  
+                  <button onClick={() => { setPlay(false); sendCommand("PAUSE"); }} className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded">Pause</button>
+                ) : (
+                  <button onClick={() => { setPlay(true); sendCommand("PLAY"); }} className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded">Play</button>
+                )}
+                <button onClick={() => sendCommand("ABORT")} className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded">Abort</button>
+              </div>
+            )}
+
+            {/* Telemetry Info */}
+            {missionCreated && (
+              <div className="flex gap-3 ml-4">
+                <div className={`${prediction==1?"bg-green-400":"bg-red-400"} px-3 py-1 rounded shadow text-sm font-medium`}>Prediction</div>
+                <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Battery: {Math.round(battery)}%</div>
+                <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Altitude: {altitude} m</div>
+                <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Speed: {speed} m/s</div>
+              </div>
+            )}
+
+            {/* Logout */}
+            <button onClick={handleLogout} className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium">
+              <LogOut size={20} /> Logout
+            </button>
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Map */}
         <div className="relative h-screen w-screen overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <Map newMissionMode={newMissionMode} drawType={drawType} />
+            <Map
+              newMissionMode={newMissionMode}
+              drawType={drawType}
+              selectedField={selectedField}
+              onMissionCreated={handleMissionCreated}
+              onSelectedFieldHandled={handleSelectedFieldHandled}
+              setMissionCreated={setMissionCreated}
+              missionCreated={missionCreated}
+            />
           </div>
         </div>
       </div>
 
-      {/* Overlay for mobile when sidebar open */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black opacity-40 z-30"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
+      {/* Sidebar Overlay */}
+      {sidebarOpen && <div className="fixed inset-0 bg-black opacity-40 z-30" onClick={() => setSidebarOpen(false)}></div>}
+
+      {/* Modals */}
+      {showMissionPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center gap-6 w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Start a New Mission</h2>
+            <div className="flex gap-4 w-full">
+              <button onClick={chooseExistingField} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg font-bold text-lg">Existing Field</button>
+              <button onClick={chooseNewField} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-bold text-lg">New Field</button>
+            </div>
+            <button onClick={() => setShowMissionPopup(false)} className="mt-4 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold">Cancel</button>
+          </div>
+        </div>
       )}
-       {showPopup && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center gap-6 w-96">
-      <h2 className="text-xl font-semibold text-gray-800">Select Mission Type</h2>
-      <div className="flex gap-4 w-full">
-        <button
-          onClick={() => selectDrawType("polygon")}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg font-bold transition-colors text-lg"
-        >
-          Polygon
-        </button>
-        <button
-          onClick={() => selectDrawType("polyline")}
-          className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-4 rounded-lg font-bold transition-colors text-lg"
-        >
-          Custom
-        </button>
-      </div>
-      {/* Cancel Button */}
-      <button
-        onClick={() => setShowPopup(false)}
-        className="mt-4 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold transition-colors"
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-)}
+
+      {showExistingPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col gap-4 w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Select Existing Field</h2>
+            {existingFields?.map((field) => (
+              <button key={field.id} onClick={() => handleSelectExistingField(field)} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-semibold transition">
+                {field.name}
+              </button>
+            ))}
+            <button onClick={() => setShowExistingPopup(false)} className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showDrawTypePopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col gap-4 w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Select Draw Type</h2>
+            <div className="flex gap-4 w-full">
+              <button onClick={() => selectDrawType("polygon")} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold">Polygon</button>
+              <button onClick={() => selectDrawType("polyline")} className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-semibold">Polyline</button>
+            </div>
+            <button onClick={() => setShowDrawTypePopup(false)} className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-lg font-semibold">Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-export default LoggedInHomePage;
 
+export default LoggedInHomePage;

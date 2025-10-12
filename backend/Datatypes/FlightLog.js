@@ -15,7 +15,7 @@ const FlightLog = sequelize.define('FlightLog', {
     defaultValue: DataTypes.NOW,
   },
   telemetry: {
-    type: DataTypes.JSONB, // {lat, lon, alt, speed, battery}
+    type: DataTypes.JSONB, // {lat, lon, alt, speed, battery,prediction}
     allowNull: false,
   },
 }, {
