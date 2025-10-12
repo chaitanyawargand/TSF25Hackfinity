@@ -14,7 +14,8 @@
   - [Backend (Node.js)](#backend-nodejs)  
   - [Simulator (Native)](#simulator-native)  
   - [Frontend (React)](#frontend-react)  
-- [Configuration & Environment Variables](#configuration--environment-variables)  
+- [Configuration & Environment Variables](#configuration--environment-variables)
+- [Machine Learning Models](#machine-learning-model) 
 - [API & WebSocket Interface](#api--websocket-interface)  
 - [Developer Workflows & Tips](#developer-workflows--tips)
 
@@ -208,6 +209,31 @@ GOOGLE_CLIENT_SECRET=…
 FASTAPI_URL=http://localhost:8000
 SIMULATOR_PATH=../simulator/simulator
 ```
+
+## Machine Learning Models
+
+The **FastAPI microservice** integrates two machine learning pipelines designed for agricultural analysis and live field monitoring.
+
+### 1. Weed Segmentation (UNet with ResNet50 Encoder)
+
+- **Model**: UNet architecture with ResNet50 encoder  
+- **Task**: Segments weed coverage from aerial images captured by drones  
+- **Input**: Raw image bytes (transmitted through API endpoints)  
+- **Output**: Image bytes containing an overlay showing detected weed regions  
+- **Deployment**: Inference is served through the FastAPI service, producing real-time visual overlays for the frontend map view  
+- **Weights**: Stored as a GitHub release asset due to file size (>100 MB)
+
+### 2. Crop Disease Classification (MobileNetV2)
+
+- **Model**: MobileNetV2  
+- **Task**: Classifies crop health as *healthy* or *diseased* based on field images  
+- **Input**: Raw image bytes received from drone or simulator  
+- **Output**: JSON response with health status prediction  
+- **Deployment**: Integrated within the FastAPI service for low-latency classification  
+- **Weights**: Stored locally in the FastAPI directory (`plant_disease_mobilenetv2_weights.pth`)
+
+Both models are fully modular and accessible through REST endpoints exposed by the FastAPI service, enabling seamless integration with the Node.js backend and React frontend for real-time field analysis and monitoring.
+
 
 ## Contributing
 
