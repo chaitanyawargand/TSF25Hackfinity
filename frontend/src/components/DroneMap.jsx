@@ -25,14 +25,13 @@ function LocationMarker() {
   return position ? <Marker position={position} /> : null;
 }
 
-function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
+function Map({ newMissionMode, drawType, selectedField, onFieldSaved,setMissionCreated }) {
   const [savedFields, setSavedFields] = useState([]);
   const [CurrentField, setCurrentField] = useState(null);
   const mapRef = useRef(null);
   const drawnFGRef = useRef(null);
   const previewLayerRef = useRef(null);
   const socketRef = useRef(null);
-  const Id = useSelector((state) => state.Id?.value);
 
   // WebSocket setup
   useEffect(() => {
@@ -156,6 +155,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
       btn.onclick = (ev) => {
         ev.stopPropagation?.();
         saveField(fieldData, label);
+        setMissionCreated(true);
       };
       return btn;
     };
@@ -176,7 +176,6 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
     }
 
     setTimeout(() => attachPopup(layer, coords, type, meta), 0);
-
     layer.on("click", () => {
       let currentCoords;
       try {

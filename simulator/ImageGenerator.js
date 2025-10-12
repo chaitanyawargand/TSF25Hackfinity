@@ -1,8 +1,8 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-export default function pickRandomImage(allowedExtensions = ["jpg", "png", "jpeg"]) {
-    const folderPath="./Image";
+export function PickRandomImage(allowedExtensions = ["jpg", "png", "jpeg"]) {
+    const folderPath="./Images";
   if (!fs.existsSync(folderPath)) {
     console.error("Folder does not exist!");
     return null;

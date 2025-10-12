@@ -1,76 +1,112 @@
-const WebSocket = require("ws");
+import { WebSocketServer } from "ws";
 import runCppProgram from "./1.js";
 import { sendImageToFastAPI } from "./getImage.js";
-import {pickRandomImage} from "./ImageGenerator.js";
+import { PickRandomImage } from "./ImageGenerator.js";
 // Create WebSocket server
-const wss = new WebSocket.Server({ port: 3000 }, () => {
-  console.log("WebSocket server running on ws://localhost:3000");
+const wss = new WebSocketServer({ port: 3000 }, () => {
+  console.log("✅ WebSocket server running on ws://localhost:3000");
 });
-let waypoint = [];
-let iterator=0;
-let batteryLevel=100;
 
-function battery(){
-    batteryLevel--;
-    return batteryLevel;
+let waypoint = [];
+let iterator = 0;
+let batteryLevel = 100;
+
+function broadcast(message) {
+  const msgString = JSON.stringify(message);
+  wss.clients.forEach((client) => {
+    if (client.readyState === client.OPEN) {
+      client.send(msgString);
+    }
+  });
 }
 
 
-
-function generateTelemetryData() {
-  return {
-    timestamp: Date.now(),
-    altitude:2,
-    speed: 10,
-    battery: battery(),
-    lat:waypoint[iterator][0],
-    lng:waypoint[iterator++][1],
-    bool:sendImageToFastAPI(pickRandomImage())
-  };
+function battery() {
+  batteryLevel = Math.max(0, batteryLevel - 1);
+  return batteryLevel;
 }
 
 function degreesToMinutes(deg) {
-  return Math.floor(deg*60);
+  return Math.floor(deg * 60);
 }
 
-function generateMap(mission){
-    const input = `${mission.coords.length} `;
-    for(i=0;i<mission.coords.length;i++){
-        input+=`${degreesToMinutes(mission.coords[i].lat)} ${degreesToMinutes(mission.coords[i].lng)} `;
+async function generateTelemetryData() {
+  if (!waypoint.length || iterator >= waypoint.length) return null;
+
+  const image = PickRandomImage();
+  let prediction = 0;
+  if (image) {
+    try {
+      prediction = await sendImageToFastAPI(image);
+    } catch (err) {
+      console.error("❌ FastAPI error:", err);
     }
-    input+="2";
-    runCppProgram(input).then((output)=>{
-        waypoint=output;
-        startTelemetry(mission);
-    }).catch(console.err);
+  }
+  return {
+    timestamp: Date.now(),
+    altitude: 2,
+    speed: 10,
+    battery: battery(),
+    lat: waypoint[iterator][0],
+    lng: waypoint[iterator++][1],
+    prediction,
+  };
 }
 
-// Function to start sending telemetry data
-const startTelemetry = (currentMission) => {
-if (telemetryInterval) clearInterval(telemetryInterval);
-telemetryInterval = setInterval(() => {
-  if (!isPaused) {
-    const data = {
-      type: "TELEMETRY",
-      missionId: currentMission?.id || null,
-      telemetry: generateTelemetryData(),
-    };
-    ws.send(JSON.stringify(data));
+function generateMap(mission, startTelemetry) {
+  let input = `${mission.coords.length} `;
+  for (let i = 0; i < mission.coords.length; i++) {
+    input += `${degreesToMinutes(mission.coords[i].lat)} ${degreesToMinutes(
+      mission.coords[i].lng
+    )} `;
   }
-}, 500); // every 0.5 seconds
-};
+  input += "2";
 
+  runCppProgram(input)
+    .then((output) => {
+      waypoint = output;
+      iterator = 0;
+      console.log("🗺️ Waypoints generated:", waypoint);
+      startTelemetry(mission);
+    })
+    .catch(console.error);
+}
 
 wss.on("connection", (ws) => {
-  console.log("Client connected");
+  console.log("🛰️ Client connected");
 
-  let telemetryInterval = null;
   let currentMission = null;
-  let isPaused = false;
+  let telemetryLoopActive = false;
 
+  // ---- Async telemetry loop ----
+  const startTelemetry = async (mission) => {
+    if (telemetryLoopActive) return;
+    telemetryLoopActive = true;
 
+    while (true) {
+      // if (!mission || isPaused) {
+      //   await new Promise((r) => setTimeout(r, 500));
+      //   continue;
+      // }
 
-  // Handle incoming messages
+      const telemetry = await generateTelemetryData();
+      if (!telemetry) {
+        broadcast({ type: "STATUS", message: "Mission complete" });
+        telemetryLoopActive = false;
+        break;
+      }
+
+      broadcast({
+        type: "TELEMETRY",
+        missionId: mission?.id || null,
+        telemetry,
+      });
+
+      await new Promise((r) => setTimeout(r, 500)); // 0.5 sec delay
+    }
+  };
+
+  // ---- Message handling ----
   ws.on("message", (message) => {
     try {
       const msg = JSON.parse(message);
@@ -79,28 +115,26 @@ wss.on("connection", (ws) => {
       switch (msg.command) {
         case "NEW_MISSION":
           currentMission = msg.data;
-          console.log("🛰 New mission received:", currentMission);
-          ws.send(JSON.stringify({ type: "ACK", message: "Mission received" }));
-        //   startTelemetry(currentMission);
-        generateMap(currentMission);
+          console.log("🆕 New mission received:", currentMission);
+          broadcast({ type: "ACK", message: "Mission received" });
+          generateMap(currentMission, startTelemetry);
           break;
 
         case "Play":
           isPaused = false;
-          console.log("▶️ Resumed telemetry");
-          ws.send(JSON.stringify({ type: "STATUS", message: "Telemetry resumed" }));
+          broadcast({ type: "STATUS", message: "Telemetry resumed" });
           break;
 
         case "Pause":
           isPaused = true;
-          console.log("⏸ Telemetry paused");
-          ws.send(JSON.stringify({ type: "STATUS", message: "Telemetry paused" }));
+          broadcast({ type: "STATUS", message: "Telemetry paused" });
           break;
 
         case "Abort":
-          console.log("⛔ Mission aborted");
-          clearInterval(telemetryInterval);
-          ws.send(JSON.stringify({ type: "STATUS", message: "Mission aborted" }));
+          waypoint = [];
+          iterator = 0;
+          isPaused = true;
+          broadcast({ type: "STATUS", message: "Mission aborted" });
           break;
 
         default:
@@ -111,9 +145,10 @@ wss.on("connection", (ws) => {
     }
   });
 
-  // Handle disconnection
   ws.on("close", () => {
     console.log("❌ Client disconnected");
-    clearInterval(telemetryInterval);
+    waypoint = [];
+    iterator = 0
+    telemetryLoopActive = false;
   });
 });
