@@ -6,12 +6,99 @@ import {
   FeatureGroup,
   useMap,
 } from "react-leaflet";
-import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
+import "leaflet-rotatedmarker";
+import { EditControl } from "react-leaflet-draw";
 import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { useSelector } from "react-redux";
+
+const DroneIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/826/826956.png",
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+});
+
+function DroneSimulator() {
+  const map = useMap();
+  const markerRef = useRef(null);
+  const pathRef = useRef([]);
+  const polylineRef = useRef(null);
+  const lastTimeRef = useRef(0);
+  const currentPos = useRef({ lat: 20.5937, lng: 78.9629 });
+  const targetPos = useRef({ lat: 20.5937, lng: 78.9629 });
+  const animationRef = useRef(null);
+
+  useEffect(() => {
+        const ws = new WebSocket("ws://localhost:3000");
+
+    ws.onopen = () => {
+      console.log("✅ Connected to WebSocket server");
+      setSocket(ws);
+    };
+
+    const marker = L.marker([currentPos.current.lat, currentPos.current.lng], {
+      icon: L.icon({
+        iconUrl: "https://cdn-icons-png.flaticon.com/512/2991/2991112.png",
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      }),
+      rotationAngle: 0,
+      rotationOrigin: "center",
+    }).addTo(map);
+
+    const polyline = L.polyline([[currentPos.current.lat, currentPos.current.lng]], {
+      color: "red",
+      weight: 3,
+    }).addTo(map);
+    markerRef.current = marker;
+    polylineRef.current = polyline;
+    pathRef.current = [[currentPos.current.lat, currentPos.current.lng]];
+    const interval = setInterval(() => {
+      const lat = targetPos.current.lat + (Math.random() - 0.5) * 0.3;
+      const lng = targetPos.current.lng + (Math.random() - 0.5) * 0.3;
+      targetPos.current = { lat, lng };
+    }, 3000);
+    const animate = (time) => {
+      const dt = time - lastTimeRef.current;
+      lastTimeRef.current = time;
+      const speed = 0.001 * dt;
+      currentPos.current.lat += (targetPos.current.lat - currentPos.current.lat) * speed;
+      currentPos.current.lng += (targetPos.current.lng - currentPos.current.lng) * speed;
+      // rotation angle
+      const dx = targetPos.current.lng - currentPos.current.lng;
+      const dy = targetPos.current.lat - currentPos.current.lat;
+      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+      // update drone
+      marker.setLatLng([currentPos.current.lat, currentPos.current.lng]);
+      marker.setRotationAngle(angle);
+
+      // path
+      pathRef.current.push([currentPos.current.lat, currentPos.current.lng]);
+      polyline.setLatLngs(pathRef.current);
+
+      // optional smooth follow
+      map.panTo([currentPos.current.lat, currentPos.current.lng], { animate: true, duration: 0.3 });
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+      clearInterval(interval);
+      marker.remove();
+      polyline.remove();
+    };
+  }, [map]);
+
+  return null;
+}
+
+
 
 function LocationMarker() {
   const [position, setPosition] = useState(null);
@@ -252,6 +339,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved }) {
             }}
           />
         </FeatureGroup>
+        <DroneSimulator />
       </MapContainer>
     </div>
   );
