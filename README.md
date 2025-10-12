@@ -93,4 +93,51 @@ python3 -m venv venv
 source venv/bin/activate    # Windows: venv\Scripts\activate
 pip install -r requirements.txt   # or install fastapi, uvicorn, and any ML deps
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+### Backend (Node.js)
+
+```bash
+cd ../backend
+npm install
+# Create .env file (see Configuration section)
+npm run dev   # or `node server.js` (or whatever the entrypoint is)
+```
+
+###Simulator (Native)
+```bash
+cd ../simulator
+# Example build command
+g++ -o simulator main.cpp
+# Or follow your existing build scripts
+```
+
+### Frontend (React)
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+## ENV CONFIGURATION:
+
+### Backend .env example
+
+```bash
+PORT=3000
+WS_PORT=3000
+JWT_SECRET=your_jwt_secret
+GOOGLE_CLIENT_ID=…
+GOOGLE_CLIENT_SECRET=…
+FASTAPI_URL=http://localhost:8000
+SIMULATOR_PATH=../simulator/simulator
+```
+
+## Contributing
+
+-Fork the repository
+-Create a feature branch: git checkout -b feat/your-feature
+-Write your code, add tests, update docs
+-Open a pull request with a description of changes
+-Please follow consistent naming, code style, and update this README if you add or modify APIs.
+
 
