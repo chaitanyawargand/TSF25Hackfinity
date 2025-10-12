@@ -15,7 +15,7 @@
   - [Simulator (Native)](#simulator-native)  
   - [Frontend (React)](#frontend-react)  
 - [Configuration & Environment Variables](#configuration--environment-variables)
-- [Machine Learning Models](#machine-learning-model) 
+- [Machine Learning Models](#machine-learning-models) 
 - [API & WebSocket Interface](#api--websocket-interface)  
 - [Developer Workflows & Tips](#developer-workflows--tips)
 
