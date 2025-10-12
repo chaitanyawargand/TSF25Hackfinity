@@ -4,7 +4,8 @@
 
 ## Table of Contents
 
-- [Architecture Overview](#architecture-overview)  
+- [Architecture Overview](#architecture-overview)
+- [File Structure](#file-structure) 
 - [System Workflow](#system-workflow)  
 - [Tech Stack & Components](#tech-stack--components)  
 - [Prerequisites](#prerequisites)  
@@ -46,6 +47,89 @@ TSF25Hackfinity comprises four cooperating subsystems:
 This modular design isolates compute-heavy or native logic into separate services, making maintenance and scaling easier.
 
 ---
+
+## File Structure
+TSF25Hackfinity/
+│
+├── backend/                     # Node.js + Express backend
+│   ├── Datatypes/               # Sequelize ORM models
+│   │   ├── Field.js             # Field schema: stores field boundaries & metadata
+│   │   ├── FlightLog.js         # Flight log schema: stores telemetry logs for missions
+│   │   ├── Mission.js           # Mission schema: mission parameters (waypoints, speed, etc.)
+│   │   ├── User.js              # User schema: stores authentication details
+│   │   └── index.js             # Central Sequelize model registration
+│   │
+│   ├── auth/auth.js             # Google JWT / OAuth strategy for authentication
+│   ├── db/db.js                 # Database connection setup (PostgreSQL / SQLite)
+│   ├── routes/                  # Express route definitions
+│   │   ├── authRoutes.js        # Handles Google login & JWT verification
+│   │   ├── createNewField.js    # Route to create new field entries
+│   │   ├── createNewFlightLog.js# Route to log telemetry data
+│   │   ├── createNewMission.js  # Route to create new missions
+│   │   └── getFields.js         # Fetch existing fields for a user
+│   ├── server.js                # Main Express server entry point
+│   ├── package.json
+│   └── .gitignore
+│
+├── fastapi_service/             # FastAPI microservice for ML analysis
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── db.py                # SQLAlchemy DB setup
+│   │   ├── field_crus.py        # CRUD operations for field data
+│   │   ├── field_routes.py      # FastAPI route definitions
+│   │   ├── main.py              # FastAPI application entry
+│   │   ├── models.py            # Database models (Field, Telemetry)
+│   │   └── schemas.py           # Pydantic schemas for validation
+│   ├── .env                     # Environment variables
+│   └── requirements.txt         # Python dependencies
+│
+├── frontend/                    # React-based user interface
+│   ├── src/
+│   │   ├── components/          # UI components
+│   │   │   ├── DroneMap.jsx     # Leaflet map showing live drone position
+│   │   │   ├── Mission.jsx      # Mission creation & telemetry visualization
+│   │   │   ├── GoogleLogin.jsx  # Handles Google OAuth
+│   │   │   ├── HomePage.jsx     # Landing page
+│   │   │   ├── LoggedInHomePage.jsx # Post-login dashboard
+│   │   │   ├── Success.jsx      # Confirmation after mission creation
+│   │   │   └── sidebar.jsx      # Sidebar navigation
+│   │   │
+│   │   ├── features/            # Redux slices for user state
+│   │   │   ├── Email.js
+│   │   │   ├── Id.js
+│   │   │   ├── Name.js
+│   │   │   ├── Type.js
+│   │   │   └── isLoggedIn.js
+│   │   │
+│   │   ├── redux/store-persist.js  # Redux store with persistence
+│   │   ├── main.jsx               # React root entry
+│   │   ├── index.css              # Global styles
+│   │   └── TypeRouter.jsx         # Route-based rendering logic
+│   ├── public/
+│   │   └── vite.svg
+│   ├── package.json
+│   └── vite.config.js
+│
+├── simulator/                    # Drone simulation & telemetry generator
+│   ├── server.js                 # WebSocket server (connects to React frontend)
+│   ├── getImage.js               # Fetch random drone image from directory
+│   ├── ImageGenerator.js         # Handles simulated drone image processing
+│   ├── waypoints.js              # Defines sample waypoint coordinates
+│   ├── batteryLevelSimulator.js  # Battery drain simulation
+│   ├── grid.cpp / grid.exe       # C++ module for grid computation
+│   ├── fastApi.py                # Python bridge to send data to FastAPI
+│   ├── predict_plant_health.py   # ML model inference using MobileNetV2
+│   ├── plant_disease_mobilenetv2_weights.pth # Trained model weights
+│   ├── app/
+│   │   ├── telemetry.py          # Python telemetry utilities
+│   │   ├── test_ws.py            # WebSocket test client
+│   │   ├── test.py
+│   │   └── __init__.py
+│   └── websocketConnection.js    # WebSocket client utilities
+│
+├── package.json                  # Root-level scripts & dependencies
+└── package-lock.json
+
 
 ## System Workflow
 
