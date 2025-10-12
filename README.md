@@ -231,6 +231,10 @@ The **FastAPI microservice** integrates two machine learning pipelines designed 
 - **Output**: JSON response with health status prediction  
 - **Deployment**: Integrated within the FastAPI service for low-latency classification  
 - **Weights**: Stored locally in the FastAPI directory (`plant_disease_mobilenetv2_weights.pth`)
+<img width="680" height="622" alt="image" src="https://github.com/user-attachments/assets/1060f03d-892e-43aa-ae75-c7945640b987" />
+
+
+
 
 Both models are fully modular and accessible through REST endpoints exposed by the FastAPI service, enabling seamless integration with the Node.js backend and React frontend for real-time field analysis and monitoring.
 
