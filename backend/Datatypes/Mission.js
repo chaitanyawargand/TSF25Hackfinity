@@ -9,14 +9,14 @@ const Mission = sequelize.define('Mission', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
+  altitude:{
+    type:DataTypes.INTEGER,
+    allowNull: false
   },
-  waypoints: {
-    type: DataTypes.JSONB, // array of {lat, lon, alt, speed}
-    allowNull: false,
-  },
+  speed:{
+    type:DataTypes.INTEGER,
+    allowNull: false
+  }
 }, {
   tableName: 'missions',
   timestamps: true,

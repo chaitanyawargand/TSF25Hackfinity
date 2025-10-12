@@ -5,9 +5,9 @@ function runCppProgram(inputData) {
   return new Promise((resolve, reject) => {
     const cppProcess = spawn("./grid.exe"); // your compiled C++ binary
 
-    let output = "";
+    let output = [];
     cppProcess.stdout.on("data", (data) => {
-      output += data.toString();
+      output.push(data);
     });
 
     cppProcess.stderr.on("data", (err) => {

@@ -14,6 +14,7 @@ const LoggedInHomePage = () => {
   const [newField, setNewField] = useState(false);
   const [existingFields, setExistingFields] = useState([]);
   const [battery, setBattery] = useState(100);
+  const [prediction, setPredicton] = useState(1);
   const [altitude, setAltitude] = useState(0);
   const [speed, setSpeed] = useState(0);
 
@@ -122,10 +123,15 @@ const LoggedInHomePage = () => {
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
+      console.log(msg);
       if (msg.type === "TELEMETRY") {
+        setPredicton(msg.telemetry.prediction);
         setBattery(msg.telemetry.battery);
         setAltitude(msg.telemetry.altitude);
         setSpeed(msg.telemetry.speed);
+      }
+      if(msg.type==="BATTERY"){
+        alert("Battery Over");
       }
     };
 
@@ -176,6 +182,7 @@ const LoggedInHomePage = () => {
             {missionCreated && (
               <div className="flex items-center gap-2">
                 {Play ? (
+                  
                   <button onClick={() => { setPlay(false); sendCommand("PAUSE"); }} className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded">Pause</button>
                 ) : (
                   <button onClick={() => { setPlay(true); sendCommand("PLAY"); }} className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded">Play</button>
@@ -187,7 +194,8 @@ const LoggedInHomePage = () => {
             {/* Telemetry Info */}
             {missionCreated && (
               <div className="flex gap-3 ml-4">
-                <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Battery: {battery}%</div>
+                <div className={`${prediction==1?"bg-green-400":"bg-red-400"} px-3 py-1 rounded shadow text-sm font-medium`}>Prediction</div>
+                <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Battery: {Math.round(battery)}%</div>
                 <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Altitude: {altitude} m</div>
                 <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded shadow text-sm font-medium">Speed: {speed} m/s</div>
               </div>
@@ -210,6 +218,7 @@ const LoggedInHomePage = () => {
               onMissionCreated={handleMissionCreated}
               onSelectedFieldHandled={handleSelectedFieldHandled}
               setMissionCreated={setMissionCreated}
+              missionCreated={missionCreated}
             />
           </div>
         </div>
