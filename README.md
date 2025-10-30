@@ -163,29 +163,24 @@ Make sure you have installed:
 
 Below are suggested steps. Adjust paths and commands to reflect your actual files.
 
-### FastAPI Service
-
-```bash
-cd fastapi_service
-python3 -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-pip install -r requirements.txt   # or install fastapi, uvicorn, and any ML deps
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
 ### Backend (Node.js)
 
 ```bash
 cd ../backend
 npm install
 # Create .env file (see Configuration section)
-npm run dev   # or `node server.js` (or whatever the entrypoint is)
+nodemon server.js
 ```
 
-###Simulator (Native)
+### Simulator + Fast API
 ```bash
-cd ../simulator
-# Example build command
-g++ -o simulator main.cpp
+cd simulator
+pip install -r requirements.txt   # or install fastapi, uvicorn, and any ML deps
+python3 -m venv venv
+source venv/bin/activate    # Windows: venv\Scripts\activate
+uvicorn fastapi --reload --host 0.0.0.0 --port 8000
+nodemon server.js
+g++ -o simulator grid.cpp
 # Or follow your existing build scripts
 ```
 
