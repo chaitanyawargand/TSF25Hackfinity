@@ -8,7 +8,7 @@ const HomePage = () => {
       {/* Header / Branding */}
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-extrabold text-indigo-700 tracking-tight drop-shadow-sm">
-          Welcome to HFGCS
+          Welcome to AgriGCS
         </h1>
         <p className="mt-3 text-gray-600 text-lg">
           Seamless login. Smarter access. Simplified workflow.
@@ -21,7 +21,7 @@ const HomePage = () => {
           <LogIn className="text-indigo-600" /> Sign In
         </h2>
         <p className="text-gray-500 mb-6">
-          Use your Google account to get started with HFGCS
+          Use your Google account to get started with AgriGCS
         </p>
 
         <div className="flex justify-center">
@@ -31,7 +31,7 @@ const HomePage = () => {
 
       {/* Footer */}
       <footer className="mt-12 text-sm text-gray-500">
-        © {new Date().getFullYear()} HFGCS — All rights reserved.
+        © {new Date().getFullYear()} AgriGCS — All rights reserved.
       </footer>
     </div>
   );

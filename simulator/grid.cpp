@@ -7,9 +7,9 @@ double minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
 vector<pair<double, double>> trajectory;
 vector<pair<double, double>> gridCorners;
 
-int sidegen(int alt) {
-    return (size1 * alt) / alt1;
-}
+// int sidegen(int alt) {
+//     return (size1 * alt) / alt1;
+// }
 
 void ordergen(vector<pair<double, double>>& pts, double px, double py) {
     sort(pts.begin(), pts.end(), [&](pair<double, double> a, pair<double, double> b) {
@@ -168,7 +168,8 @@ int main() {
     
     int alt;
     cin >> alt;
-    int side = sidegen(alt);
+    //int side = sidegen(alt);
+    int side=2;
     
     // Create a working copy of points for polygon operations
     vector<pair<double, double>> polyPoints = pts;
