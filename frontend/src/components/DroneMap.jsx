@@ -171,6 +171,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved, setMission
     const fieldObj = { uid: finalUid, coords, operation, type, source };
 
     handleMissionCreated(fieldObj);
+    console.log(fieldObj);
 
     setSavedFields((prev) => {
       const idx = prev.findIndex((f) => f.uid === finalUid);
