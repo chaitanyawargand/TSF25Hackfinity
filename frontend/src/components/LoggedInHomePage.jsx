@@ -25,6 +25,7 @@ const LoggedInHomePage = () => {
   const [showMissionPopup, setShowMissionPopup] = useState(false);
   const [showExistingPopup, setShowExistingPopup] = useState(false);
   const [showDrawTypePopup, setShowDrawTypePopup] = useState(false);
+  const [overlayImage, setoverlayImage] = useState();
 
   // selected field object passed to Map
   const [selectedField, setSelectedField] = useState(null);
@@ -129,6 +130,7 @@ const LoggedInHomePage = () => {
         setBattery(msg.telemetry.battery);
         setAltitude(msg.telemetry.altitude);
         setSpeed(msg.telemetry.speed);
+        setoverlayImage(msg.telemetry.overlay);
       }
       if(msg.type==="BATTERY"){
         alert("Battery Over");
@@ -211,6 +213,17 @@ const LoggedInHomePage = () => {
         {/* Map */}
         <div className="relative h-screen w-screen overflow-hidden">
           <div className="absolute inset-0 z-0">
+            {overlayImage && (
+  <div className="absolute bottom-4 right-4 bg-white shadow-lg rounded-lg p-2 z-[9999] border border-gray-300">
+    <h3 className="text-sm font-semibold mb-1 text-gray-700 text-center">AI Prediction Overlay</h3>
+    <img
+      src={overlayImage}
+      alt="Prediction Overlay"
+      className="w-64 h-64 object-contain rounded-lg"
+    />
+  </div>
+)}
+
             <Map
               newMissionMode={newMissionMode}
               drawType={drawType}
