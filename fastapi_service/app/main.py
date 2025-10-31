@@ -1,7 +1,7 @@
 # main.py
 from fastapi import FastAPI
-from app.routes.fields import router as field_router
-from app.database import Base, engine
+from app.field_routes import router as field_router
+from app.db import Base, engine
 
 # Create all database tables
 Base.metadata.create_all(bind=engine)

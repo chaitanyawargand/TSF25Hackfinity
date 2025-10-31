@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.schemas import FieldCreate, FieldOut
-from app.crud import field_crud
+import app.field_crud as field_crud
 
 router = APIRouter(prefix="/fields", tags=["Fields"])
 

@@ -1,6 +1,7 @@
 import { WebSocketServer } from "ws";
 import runCppProgram from "./1.js";
 import { PickRandomImage } from "./ImageGenerator.js";
+import { PickRandomweedImages } from "./weedimageGenerator.js";
 import axios from "axios";
 import fs from "fs";
 import FormData from "form-data";
@@ -46,10 +47,14 @@ async function generateTelemetryData() {
   if (isAborted) return;
   if (!waypoint.length || iterator >= waypoint.length) return null;
 
-  const imagePath = PickRandomImage(); // ✅ FIXED: Correct variable name
-  let prediction = 0;
-  let overlayBase64 = null;
+  const imagePath = PickRandomImage(); // for plant health
+  const weedPath = PickRandomweedImages(); // for weed detection
 
+  let prediction = 0;
+  let overlayBase64 = null; // plant health overlay
+  let weedBase64 = null;    // weed detection overlay
+
+  // 🌿 1️⃣ Send plant image to FastAPI for plant health
   if (imagePath && fs.existsSync(imagePath)) {
     try {
       const formData = new FormData();
@@ -57,21 +62,33 @@ async function generateTelemetryData() {
 
       const response = await axios.post("http://127.0.0.1:8000/predict", formData, {
         headers: formData.getHeaders(),
-        responseType: "arraybuffer", // so we can handle image bytes
+        responseType: "arraybuffer",
       });
 
-      // Extract header flag (1 or 0)
       prediction = parseInt(response.headers["x-health-flag"] || "0", 10);
-
-      // Convert overlay bytes to base64
       const base64Data = Buffer.from(response.data, "binary").toString("base64");
       overlayBase64 = `data:image/png;base64,${base64Data}`;
-
     } catch (err) {
-      console.error("❌ FastAPI communication error:", err.message);
+      console.error("❌ Plant model error:", err.message);
     }
-  } else {
-    console.warn("⚠️ Image not found or invalid path:", imagePath);
+  }
+
+  // 🌾 2️⃣ Send random weed image to FastAPI for weed detection
+  if (weedPath && fs.existsSync(weedPath)) {
+    try {
+      const weedForm = new FormData();
+      weedForm.append("file", fs.createReadStream(weedPath), "weed.jpg");
+
+      const weedResponse = await axios.post("http://127.0.0.1:8000/predict", weedForm, {
+        headers: weedForm.getHeaders(),
+        responseType: "arraybuffer",
+      });
+
+      const weedBase64Data = Buffer.from(weedResponse.data, "binary").toString("base64");
+      weedBase64 = `data:image/png;base64,${weedBase64Data}`;
+    } catch (err) {
+      console.error("❌ Weed detection error:", err.message);
+    }
   }
 
   const currentPoint = waypoint[iterator];
@@ -85,12 +102,14 @@ async function generateTelemetryData() {
     lat: currentPoint[0],
     lng: currentPoint[1],
     prediction,
-    overlay: overlayBase64,
+    overlay: overlayBase64,  // plant model
+    weedImage: weedBase64,   // weed model
   };
 
   iterator++;
   return telemetry;
 }
+
 
 // Run C++ map generation and produce waypoints
 function generateMap(mission, startTelemetry) {

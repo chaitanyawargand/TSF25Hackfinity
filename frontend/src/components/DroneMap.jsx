@@ -63,10 +63,8 @@ function DroneSimulator({ targetPos, initialPos }) {
         const dx = targetLng - currentPos.current.lng;
         const dy = targetLat - currentPos.current.lat;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 0.00001) {
           // speed proportional to distance
-          const speed = Math.min(0.01 * dt, 1); 
+          const speed =0.01; 
           currentPos.current.lat += dy * speed;
           currentPos.current.lng += dx * speed;
 
@@ -79,7 +77,6 @@ function DroneSimulator({ targetPos, initialPos }) {
 
           // Pan map smoothly
           map.panTo([currentPos.current.lat, currentPos.current.lng], { animate: true, duration: 0.3 });
-        }
       }
 
       animationRef.current = requestAnimationFrame(animate);
@@ -117,6 +114,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved, setMission
   const drawnFGRef = useRef(null);
   const previewLayerRef = useRef(null);
   const socketRef = useRef(null);
+  const [droneCoords, setDroneCoords] = useState(null);
 
   const targetPos = useRef({});
   const initialDronePos = useRef({ lat: 0, lng: 0 });
@@ -133,6 +131,7 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved, setMission
       if (msg?.telemetry && missionStarted) {
         const { lat, lng } = msg.telemetry;
         targetPos.current = { lat, lng }; // in minutes
+        setDroneCoords({ lat, lng }); 
       }
     };
 
@@ -265,7 +264,13 @@ function Map({ newMissionMode, drawType, selectedField, onFieldSaved, setMission
           pointer-events: none;
         }
       `}</style>
-
+       {droneCoords && (
+        <div className="absolute top-4 right-4 bg-white text-black rounded-lg shadow-lg p-3 text-sm font-semibold z-[9999] border border-gray-300">
+          <div>🛰️ <span className="text-blue-600">Drone Telemetry</span></div>
+          <div>Lat: {droneCoords.lat.toFixed(6)}</div>
+          <div>Lng: {droneCoords.lng.toFixed(6)}</div>
+        </div>
+      )}
       <MapContainer whenCreated={handleMapCreated} center={[20.5937, 78.9629]} zoom={5} className="h-full w-full">
         <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" attribution="&copy; Esri" />
         <TileLayer url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" attribution="&copy; Esri" />

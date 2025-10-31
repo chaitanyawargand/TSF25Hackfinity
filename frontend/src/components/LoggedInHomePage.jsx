@@ -26,6 +26,7 @@ const LoggedInHomePage = () => {
   const [showExistingPopup, setShowExistingPopup] = useState(false);
   const [showDrawTypePopup, setShowDrawTypePopup] = useState(false);
   const [overlayImage, setoverlayImage] = useState();
+  const [weedimage , setweedimage]= useState();
 
   // selected field object passed to Map
   const [selectedField, setSelectedField] = useState(null);
@@ -131,6 +132,7 @@ const LoggedInHomePage = () => {
         setAltitude(msg.telemetry.altitude);
         setSpeed(msg.telemetry.speed);
         setoverlayImage(msg.telemetry.overlay);
+        setweedimage(msg.telemetry.weedImage)
       }
       if(msg.type==="BATTERY"){
         alert("Battery Over");
@@ -213,14 +215,39 @@ const LoggedInHomePage = () => {
         {/* Map */}
         <div className="relative h-screen w-screen overflow-hidden">
           <div className="absolute inset-0 z-0">
-            {overlayImage && (
-  <div className="absolute bottom-4 right-4 bg-white shadow-lg rounded-lg p-2 z-[9999] border border-gray-300">
-    <h3 className="text-sm font-semibold mb-1 text-gray-700 text-center">AI Prediction Overlay</h3>
-    <img
-      src={overlayImage}
-      alt="Prediction Overlay"
-      className="w-64 h-64 object-contain rounded-lg"
-    />
+{(overlayImage || weedimage) && (
+  <div className="absolute bottom-6 right-6 bg-white/95 shadow-2xl rounded-2xl p-5 z-[9999] border border-gray-200 w-[430px] backdrop-blur-md">
+    <h3 className="text-lg font-semibold mb-4 text-gray-800 text-center tracking-wide flex items-center justify-center gap-2">
+      🌿 AI Prediction Results
+    </h3>
+
+    <div className="grid grid-cols-[1.2fr_0.8fr] gap-4 items-center">
+      {/* Weed Detection Image (Main Model) */}
+      {weedimage && (
+        <div className="flex flex-col items-center">
+          <img
+            src={weedimage}
+            alt="Weed Detection"
+            className="w-[240px] h-[200px] object-cover rounded-xl border border-gray-300 shadow-md"
+          />
+          <span className="text-sm font-medium text-emerald-700 mt-2">
+            Weed Detection
+          </span>
+        </div>
+      )}
+      {overlayImage && (
+        <div className="flex flex-col items-center">
+          <img
+            src={overlayImage}
+            alt="Plant Health Overlay"
+            className="w-[180px] h-[180px] object-cover rounded-xl border border-gray-300 shadow-sm"
+          />
+          <span className="text-sm font-medium text-blue-700 mt-7">
+            Plant Overlay
+          </span>
+        </div>
+      )}
+    </div>
   </div>
 )}
 

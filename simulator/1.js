@@ -9,7 +9,6 @@ function runCppProgram(inputData) {
     cppProcess.stdout.on("data", (data) => {
       output.push(data);
     });
-
     cppProcess.stderr.on("data", (err) => {
       console.error("C++ error:", err.toString());
     });
